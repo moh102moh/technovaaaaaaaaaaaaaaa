@@ -22,7 +22,7 @@ if (!is_dir(__DIR__.'/../storage/framework/cache')) {
 // تسجيل الـ Composer autoloader
 require __DIR__.'/../vendor/autoload.php';
 
-// تهيئة تطبيق Laravel و معالجة الطلب
+// تهيئة تطبيق Laravel
 $app = require_once __DIR__.'/../bootstrap/app.php';
 
 // تأكد من أن صلاحيات المجلدات التي يحتاج إليها Laravel مثل `storage` و `cache` صحيحة داخل الحاوية
@@ -31,4 +31,14 @@ if (!is_writable(__DIR__.'/../storage') || !is_writable(__DIR__.'/../bootstrap/c
     exit;
 }
 
-$app->run();
+// بدلاً من استخدام `run()`، نستخدم `handle()` لمعالجة الطلب.
+$kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
+$response = $kernel->handle(
+    $request = Illuminate\Http\Request::capture()
+);
+
+// إرسال الاستجابة
+$response->send();
+
+// إنهاء التطبيق
+$kernel->terminate($request, $response);
