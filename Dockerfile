@@ -3,15 +3,19 @@ FROM php:8.2-apache
 # تثبيت الإضافات المطلوبة
 RUN apt-get update && apt-get install -y \
     git unzip curl libzip-dev zip \
-    && docker-php-ext-install zip pdo pdo_mysql
+    && docker-php-ext-install zip pdo pdo_pgsql
 
 # تفعيل mod_rewrite
 RUN a2enmod rewrite
 
 # نسخ ملفات المشروع
 COPY . /var/www/html
-RUN chmod -R 775 storage bootstrap/cache
+
+# تأكد من أن ملف .env موجود داخل الحاوية
+COPY .env /var/www/html/.env
+
 # تغيير صلاحيات مجلد Laravel
+RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html/storage
 
@@ -29,6 +33,7 @@ RUN composer install
 # إضافة ServerName لتجنب التحذير
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
+# توليد مفتاح Laravel
 RUN php artisan key:generate
 
 EXPOSE 80
