@@ -1,4 +1,3 @@
-# استخدام صورة PHP مع Apache
 FROM php:8.2-apache
 
 # تثبيت الإضافات المطلوبة
@@ -30,6 +29,7 @@ WORKDIR /var/www/html
 RUN composer install --no-interaction --prefer-dist --optimize-autoloader
 
 # توليد مفتاح Laravel (تجاوز الأخطاء إن لم يكن .env موجود)
+RUN if [ ! -f .env ]; then cp .env.example .env; fi
 RUN if [ -f .env ]; then php artisan key:generate; fi
 
 # تفادي تحذير Apache بخصوص ServerName
