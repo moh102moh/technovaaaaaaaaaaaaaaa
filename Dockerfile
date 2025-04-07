@@ -11,13 +11,9 @@ RUN a2enmod rewrite
 # نسخ ملفات المشروع
 COPY . /var/www/html
 
-# تأكد من أن ملف .env موجود داخل الحاوية
-COPY .env /var/www/html/.env
-
 # تغيير صلاحيات مجلد Laravel
-RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html/storage
+    && chmod -R 755 /var/www/html/storage /var/www/html/bootstrap/cache
 
 # نسخ ملف إعدادات Apache
 COPY ./docker/apache.conf /etc/apache2/sites-available/000-default.conf
@@ -28,12 +24,12 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 WORKDIR /var/www/html
 
 # تثبيت الحزم باستخدام Composer
-RUN composer install
-
-# إضافة ServerName لتجنب التحذير
-RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader
 
 # توليد مفتاح Laravel
 RUN php artisan key:generate
+
+# إضافة ServerName لتجنب التحذير
+RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
 EXPOSE 80
