@@ -1,38 +1,39 @@
+# استخدام صورة PHP مع Apache
 FROM php:8.2-apache
 
-# تثبيت الإضافات المطلوبة + PostgreSQL dev libs
+# تثبيت الإضافات المطلوبة
 RUN apt-get update && apt-get install -y \
     git unzip curl libzip-dev zip libpq-dev \
     && docker-php-ext-install zip pdo pdo_pgsql
 
-# تفعيل mod_rewrite لـ Laravel
+# تفعيل mod_rewrite
 RUN a2enmod rewrite
 
-# نسخ ملفات المشروع إلى مجلد Apache
+# نسخ ملفات المشروع إلى مسار Apache
 COPY . /var/www/html
 
-# تغيير صلاحيات مجلد Laravel (لتفادي مشاكل التخزين والكاش)
-RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
-RUN chown -R www-data:www-data /var/www/html \
+# تغيير صلاحيات مجلد Laravel
+RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache \
+    && chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html/storage
 
-# نسخ ملف إعدادات Apache (لضبط DocumentRoot على /public)
+# نسخ ملف إعدادات Apache
 COPY ./docker/apache.conf /etc/apache2/sites-available/000-default.conf
 
-# تثبيت Composer
+# إعداد Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# تعيين مسار العمل داخل الحاوية
+# تحديد مجلد العمل
 WORKDIR /var/www/html
 
-# تثبيت الحزم باستخدام Composer (لو كان عندك ملف composer.json)
-RUN composer install || true
+# تثبيت الحزم باستخدام Composer
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader
 
-# توليد مفتاح Laravel (إن وجد)
-RUN if [ -f artisan ]; then php artisan key:generate || true; fi
+# توليد مفتاح Laravel (تجاوز الأخطاء إن لم يكن .env موجود)
+RUN if [ -f .env ]; then php artisan key:generate; fi
 
-# منع تحذير ServerName
+# تفادي تحذير Apache بخصوص ServerName
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
-# تعيين البورت
+# فتح المنفذ 80
 EXPOSE 80
