@@ -31,11 +31,14 @@ if (!is_writable(__DIR__.'/../storage') || !is_writable(__DIR__.'/../bootstrap/c
     exit;
 }
 
-// بدلاً من استخدام `run()`، نستخدم `handle()` لمعالجة الطلب.
+// الحصول على كائن الـ Kernel
 $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
-$response = $kernel->handle(
-    $request = Illuminate\Http\Request::capture()
-);
+
+// التقاط الطلب من الـ HTTP
+$request = Illuminate\Http\Request::capture();
+
+// معالجة الطلب باستخدام الـ Kernel
+$response = $kernel->handle($request);
 
 // إرسال الاستجابة
 $response->send();
