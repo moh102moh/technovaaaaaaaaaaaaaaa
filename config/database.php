@@ -15,8 +15,9 @@ return [
     | is explicitly specified when you execute a query / statement.
     |
     */
+'default' => env('DB_CONNECTION', 'array'),
 
-    'default' => env('DB_CONNECTION', 'sqlite'),
+
 
     /*
     |--------------------------------------------------------------------------
