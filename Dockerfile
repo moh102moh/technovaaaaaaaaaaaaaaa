@@ -1,44 +1,57 @@
 # ----------------------
-# Stage 1: Build PHP with needed extensions + Composer
+# Builder stage: install PHP extensions & composer deps
 # ----------------------
-FROM php:8.2-cli as stage-0
+FROM php:8.2-cli AS builder
 
+# Install system dependencies and PHP extensions commonly required by Laravel
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
     zip \
     libzip-dev \
-    && docker-php-ext-install zip pdo pdo_mysql \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    libxml2-dev \
+    zlib1g-dev \
+    libonig-dev \
+  && docker-php-ext-install mbstring bcmath xml zip pdo pdo_mysql \
+  && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Install Composer binary
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 
-# نسخ composer.json و composer.lock أول شي
-COPY composer.json composer.lock ./
+# Copy composer files first to leverage Docker layer cache
+COPY composer.* ./
 
-# تثبيت الحزم بدون dev
-RUN composer install --no-dev --optimize-autoloader
+# Install PHP dependencies
+RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 
-# نسخ باقي ملفات المشروع
+# Copy remaining application files
 COPY . .
 
-# نسخ ملف البيئة
-RUN cp .env.example .env
+# If .env.example exists, copy it to .env (safe fallback)
+RUN if [ -f .env.example ]; then cp .env.example .env; fi
 
-# توليد APP_KEY
+# Generate APP_KEY (force to overwrite if somehow present)
 RUN php artisan key:generate --force
 
+# Ensure storage and cache folders are writable
+RUN mkdir -p storage bootstrap/cache \
+    && chown -R www-data:www-data storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
+
 # ----------------------
-# Stage 2: تشغيل التطبيق
+# Runtime stage
 # ----------------------
 FROM php:8.2-cli
 
 WORKDIR /app
 
-COPY --from=stage-0 /app /app
+# Copy application from builder
+COPY --from=builder /app /app
 
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+# Expose default port (Koyeb will provide $PORT at runtime)
+EXPOSE 8080
 
-EXPOSE 8000
+# Start the built-in PHP server and listen on the PORT provided by the platform (fallback 8080)
+CMD ["sh", "-c", "php artisan serve --host=0.0.0.0 --port=${PORT:-8080}"]
