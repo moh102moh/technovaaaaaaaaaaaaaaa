@@ -20,4 +20,5 @@ RUN composer install --no-dev --optimize-autoloader
 RUN php artisan config:cache && php artisan route:cache && php artisan view:cache
 
 # تشغيل Laravel على البورت 8080
-CMD php artisan serve --host=0.0.0.0 --port=8080
+CMD php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
+
