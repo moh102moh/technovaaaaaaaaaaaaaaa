@@ -1,29 +1,46 @@
-FROM php:8.2-cli
+# ----------------------
+# Stage 1: Build PHP with needed extensions + Composer
+# ----------------------
+FROM php:8.2-cli as stage-0
 
-# تثبيت الإضافات المطلوبة
-RUN apt-get update && apt-get install -y unzip libzip-dev git \
-    && docker-php-ext-install zip
+# تثبيت مكتبات النظام المطلوبة للـ Laravel + php extensions
+RUN apt-get update && apt-get install -y \
+    git \
+    unzip \
+    zip \
+    libzip-dev \
+    && docker-php-ext-install zip pdo pdo_mysql \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # تثبيت Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# تحديد مجلد العمل
+# تعيين مجلد العمل
 WORKDIR /app
 
-# نسخ الملفات
+# نسخ ملفات المشروع
 COPY . .
 
-# إنشاء ملف .env من المثال
+# نسخ ملف البيئة
 RUN cp .env.example .env
+
+# تثبيت الحزم بدون dev
+RUN composer install --no-dev --optimize-autoloader
 
 # توليد APP_KEY
 RUN php artisan key:generate
 
-# تثبيت حزم Laravel بدون حزم التطوير
-RUN composer install --no-dev --optimize-autoloader
+# ----------------------
+# Stage 2: تشغيل التطبيق
+# ----------------------
+FROM php:8.2-cli
 
-# تجهيز الكاش
-RUN php artisan config:cache && php artisan route:cache && php artisan view:cache
+WORKDIR /app
 
-# تشغيل Laravel على البورت 8080
-CMD php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
+# نسخ الملفات من المرحلة الأولى
+COPY --from=stage-0 /app /app
+
+# افتراضيًا نشغل السيرفر الداخلي للـ Laravel على البورت 8000
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+
+EXPOSE 8000
