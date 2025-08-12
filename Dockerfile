@@ -7,18 +7,23 @@ RUN apt-get update && apt-get install -y unzip libzip-dev git \
 # تثبيت Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# مجلد العمل
+# تحديد مجلد العمل
 WORKDIR /app
 
 # نسخ الملفات
 COPY . .
 
-# تثبيت حزم Laravel
+# إنشاء ملف .env من المثال
+RUN cp .env.example .env
+
+# توليد APP_KEY
+RUN php artisan key:generate
+
+# تثبيت حزم Laravel بدون حزم التطوير
 RUN composer install --no-dev --optimize-autoloader
 
-# تجهيز الكاش للـ Laravel
+# تجهيز الكاش
 RUN php artisan config:cache && php artisan route:cache && php artisan view:cache
 
 # تشغيل Laravel على البورت 8080
 CMD php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
-
